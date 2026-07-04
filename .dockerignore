@@ -1,0 +1,6 @@
+node_modules
+test
+data/kisa_phishing_raw.csv
+.git
+*.md
+.env

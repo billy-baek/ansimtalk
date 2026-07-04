@@ -1,0 +1,20 @@
+{
+  "name": "ansimtalk-mcp",
+  "version": "0.1.0",
+  "description": "안심톡 — 어르신을 위한 스미싱/피싱 판별 MCP 서버 (Kakao PlayMCP)",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test 'test/*.test.js'"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "express": "^4.21.0",
+    "zod": "^3.24.0"
+  }
+}
