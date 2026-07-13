@@ -8,6 +8,11 @@ import { GUIDES, SITUATIONS, EMERGENCY_CONTACTS } from './guides.js';
 
 const PORT = process.env.PORT ?? 3020;
 
+// PlayMCP 심사 요건: 모든 툴 description에 서비스명 포함 + annotations 정의
+const SVC = '안심톡 - 스미싱·보이스피싱 판별';
+// 모든 툴이 읽기 전용(데이터 변경 없음)이며 파괴적 동작 없음
+const READONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true };
+
 function buildServer() {
   const server = new McpServer({
     name: 'ansimtalk',
@@ -19,8 +24,9 @@ function buildServer() {
     {
       title: '문자 사기 여부 분석',
       description:
-        '수상한 문자·카톡 메시지 원문을 넣으면 스미싱/보이스피싱 패턴 DB와 대조해 위험도 점수(0~100), 매칭된 사기 유형, 근거를 반환한다. 사기 여부가 궁금한 메시지는 항상 이 도구로 먼저 분석할 것.',
-      inputSchema: { message: z.string().min(1).max(5000).describe('의심스러운 문자/메시지 원문 전체') }
+        `[${SVC}] 수상한 문자·카톡 메시지 원문을 넣으면 스미싱/보이스피싱 패턴 DB와 대조해 위험도 점수(0~100), 매칭된 사기 유형, 근거를 반환한다. 사기 여부가 궁금한 메시지는 항상 이 도구로 먼저 분석할 것.`,
+      inputSchema: { message: z.string().min(1).max(5000).describe('의심스러운 문자/메시지 원문 전체') },
+      annotations: { title: `${SVC} · 문자 사기 여부 분석`, ...READONLY, openWorldHint: true }
     },
     async ({ message }) => {
       const result = analyzeMessage(message);
@@ -46,8 +52,9 @@ function buildServer() {
     'check_url',
     {
       title: '링크(URL) 위험도 조회',
-      description: '링크 주소가 피싱/악성 사이트로 신고되었는지 평판 DB와 휴리스틱으로 검사한다.',
-      inputSchema: { url: z.string().min(4).max(2000).describe('검사할 URL (문자에 포함된 링크)') }
+      description: `[${SVC}] 링크 주소가 피싱/악성 사이트로 신고되었는지 KISA 피싱 데이터·구글 세이프브라우징·VirusTotal 평판과 휴리스틱으로 검사한다.`,
+      inputSchema: { url: z.string().min(4).max(2000).describe('검사할 URL (문자에 포함된 링크)') },
+      annotations: { title: `${SVC} · 링크 위험도 조회`, ...READONLY, openWorldHint: true }
     },
     async ({ url }) => {
       const target = extractUrls(url)[0] ?? url;
@@ -76,8 +83,9 @@ function buildServer() {
     'check_phone',
     {
       title: '전화번호 신고 이력 조회',
-      description: '전화번호가 사기(보이스피싱·스미싱)로 신고된 이력이 있는지 조회한다.',
-      inputSchema: { phone: z.string().min(4).max(20).describe('조회할 전화번호 (하이픈 유무 무관)') }
+      description: `[${SVC}] 전화번호가 사기(보이스피싱·스미싱)로 신고된 이력이 있는지 발신 패턴 휴리스틱으로 점검하고 경찰청 공식 조회 채널을 안내한다.`,
+      inputSchema: { phone: z.string().min(4).max(20).describe('조회할 전화번호 (하이픈 유무 무관)') },
+      annotations: { title: `${SVC} · 전화번호 신고 이력 조회`, ...READONLY, openWorldHint: false }
     },
     async ({ phone }) => {
       const normalized = phone.replace(/[-\s]/g, '');
@@ -107,8 +115,9 @@ function buildServer() {
     'check_account',
     {
       title: '계좌번호 사기 이력 조회',
-      description: '송금 전 계좌번호가 사기 이용 계좌로 신고되었는지 조회한다.',
-      inputSchema: { account: z.string().min(6).max(30).describe('조회할 계좌번호'), bank: z.string().optional().describe('은행명 (선택)') }
+      description: `[${SVC}] 송금 전 계좌번호가 사기 이용 계좌로 신고되었는지 경찰청 공식 조회 채널을 안내하고 안전 수칙을 제공한다.`,
+      inputSchema: { account: z.string().min(6).max(30).describe('조회할 계좌번호'), bank: z.string().optional().describe('은행명 (선택)') },
+      annotations: { title: `${SVC} · 계좌번호 사기 이력 조회`, ...READONLY, openWorldHint: false }
     },
     async ({ account, bank }) => {
       const normalized = account.replace(/[-\s]/g, '');
@@ -133,10 +142,11 @@ function buildServer() {
     {
       title: '사기 대처 방법 안내',
       description:
-        '상황별 대처법을 어르신 눈높이로 안내한다. situation: clicked_link(링크를 눌렀어요), sent_money(돈을 보냈어요), gave_info(개인정보를 알려줬어요), installed_app(앱을 설치했어요), general(일반 예방수칙)',
+        `[${SVC}] 상황별 대처법을 어르신 눈높이로 안내한다. situation: clicked_link(링크를 눌렀어요), sent_money(돈을 보냈어요), gave_info(개인정보를 알려줬어요), installed_app(앱을 설치했어요), general(일반 예방수칙)`,
       inputSchema: {
         situation: z.enum(['clicked_link', 'sent_money', 'gave_info', 'installed_app', 'general']).describe('현재 상황')
-      }
+      },
+      annotations: { title: `${SVC} · 사기 대처 방법 안내`, ...READONLY, openWorldHint: false }
     },
     async ({ situation }) => {
       const guide = situation === 'general'
